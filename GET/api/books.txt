@@ -1,0 +1,22 @@
+Browser / Postman / curl
+          │
+          ▼
+Express
+          │
+          ▼
+books.js
+          │
+          ▼
+pool.query()
+          │
+          ▼
+PostgreSQL
+          │
+          ▼
+books table
+          │
+          ▼
+rows returned
+          │
+          ▼
+JSON response
