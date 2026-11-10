@@ -1,33 +1,19 @@
 {
   "name": "library-devops",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
-  "directories": {
-    "test": "tests"
+  "description": "Library Management System with DevOps",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest --runInBand --coverage"
   },
- "scripts": {
-  "start": "node src/server.js",
-  "dev": "nodemon src/server.js",
-  "test": "jest --coverage"
-},
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/Sricharan86/library-devops.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/Sricharan86/library-devops/issues"
-  },
-  "homepage": "https://github.com/Sricharan86/library-devops#readme",
   "dependencies": {
     "cors": "^2.8.6",
     "dotenv": "^18.0.5",
     "express": "^5.2.1",
     "pg": "^8.23.1",
-    "start": "^5.1.0"
+    "prom-client": "^15.1.3"
   },
   "devDependencies": {
     "jest": "^30.5.2",

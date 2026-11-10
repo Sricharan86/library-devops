@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Library Management System</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,sans-serif;background:#f3f6fb;color:#172033}
+header{background:#17365d;color:white;padding:20px 5%}header h1{margin:0}
+main{max-width:1100px;margin:25px auto;padding:0 18px}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin:20px 0}
+.card,.panel{background:white;padding:18px;border-radius:12px;box-shadow:0 2px 10px #14213d12}
+.card strong{display:block;font-size:30px;color:#17365d;margin-bottom:5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+input,select,button{padding:10px;margin:5px 3px;border:1px solid #ccd4e0;border-radius:6px}
+input{max-width:100%}button{background:#17365d;color:white;border:0;cursor:pointer}
+button.secondary{background:#53657e}table{width:100%;border-collapse:collapse;background:white;margin-top:10px}
+th,td{text-align:left;padding:11px;border-bottom:1px solid #e5e9f0;font-size:14px}
+.table-wrap{overflow-x:auto}.muted{color:#68758a;font-size:13px}h2{margin-top:0}
+</style>
+</head>
+<body>
+<header><h1>Library Management System</h1><div>Books · Members · Issue & Return</div></header>
+<main>
+  <div class="cards" id="cards"></div>
+  <div class="grid">
+    <section class="panel">
+      <h2>Add a Book</h2>
+      <input id="isbn" placeholder="ISBN"><input id="title" placeholder="Book title">
+      <input id="author" placeholder="Author"><input id="category" placeholder="Category">
+      <input id="copies" type="number" min="1" value="1" placeholder="Copies">
+      <button onclick="addBook()">Save Book</button>
+    </section>
+    <section class="panel">
+      <h2>Register Member</h2>
+      <input id="memberName" placeholder="Member name"><input id="memberEmail" type="email" placeholder="Email">
+      <select id="memberType"><option value="student">Student</option><option value="staff">Staff</option></select>
+      <button onclick="addMember()">Register</button>
+    </section>
+  </div>
+  <section class="panel" style="margin-top:16px">
+    <h2>Book Catalog</h2><input id="search" placeholder="Search title, author or ISBN" oninput="loadBooks()">
+    <div class="table-wrap"><table><thead><tr><th>ID</th><th>Title</th><th>Author</th><th>Category</th><th>Available</th></tr></thead><tbody id="books"></tbody></table></div>
+  </section>
+  <div class="grid" style="margin-top:16px">
+    <section class="panel">
+      <h2>Issue a Book</h2>
+      <input id="bookId" type="number" placeholder="Book ID"><input id="memberId" type="number" placeholder="Member ID">
+      <button onclick="issueBook()">Issue for 14 days</button>
+      <p class="muted">Use the IDs shown in the catalog and members list / database.</p>
+    </section>
+    <section class="panel">
+      <h2>Members</h2><div class="table-wrap"><table><thead><tr><th>ID</th><th>Name</th><th>Email</th></tr></thead><tbody id="members"></tbody></table></div>
+    </section>
+  </div>
+  <section class="panel" style="margin-top:16px">
+    <h2>Currently Issued Books</h2>
+    <div class="table-wrap"><table><thead><tr><th>Issue</th><th>Book</th><th>Member</th><th>Due date</th><th>Action</th></tr></thead><tbody id="issues"></tbody></table></div>
+  </section>
+  <p id="message" role="status"></p>
+</main>
+<script>
+const el = id => document.getElementById(id);
+async function api(url, options={}) {
+  const response = await fetch(url, {headers:{'Content-Type':'application/json'}, ...options});
+  const data = response.status === 204 ? null : await response.json();
+  if (!response.ok) throw new Error(data?.error || 'Request failed');
+  return data;
+}
+function notify(msg){el('message').textContent=msg;}
+async function loadDashboard(){
+  const d=await api('/api/dashboard');
+  el('cards').innerHTML=[['Total books',d.total_books],['Issued',d.issued],['Overdue',d.overdue],['Members',d.members]]
+    .map(([name,value])=>`<div class="card"><strong>${value}</strong>${name}</div>`).join('');
+}
+async function loadBooks(){
+  const q=encodeURIComponent(el('search').value);
+  const rows=await api('/api/books?q='+q);
+  el('books').innerHTML=rows.map(b=>`<tr><td>${b.id}</td><td>${escapeHtml(b.title)}</td><td>${escapeHtml(b.author)}</td><td>${escapeHtml(b.category||'')}</td><td>${b.available_copies}/${b.total_copies}</td></tr>`).join('');
+}
+async function loadMembers(){
+  const rows=await api('/api/members');
+  el('members').innerHTML=rows.map(m=>`<tr><td>${m.id}</td><td>${escapeHtml(m.name)}</td><td>${escapeHtml(m.email)}</td></tr>`).join('');
+}
+async function loadIssues(){
+  const rows=await api('/api/issues');
+  el('issues').innerHTML=rows.map(i=>`<tr><td>${i.id}</td><td>${escapeHtml(i.title)}</td><td>${escapeHtml(i.member_name)}</td><td>${String(i.due_date).slice(0,10)}</td><td><button onclick="returnBook(${i.id})">Return</button></td></tr>`).join('');
+}
+function escapeHtml(value){return String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+async function addBook(){
+  try{await api('/api/books',{method:'POST',body:JSON.stringify({isbn:el('isbn').value,title:el('title').value,author:el('author').value,category:el('category').value,total_copies:Number(el('copies').value)})});notify('Book added');await refresh();}
+  catch(e){notify(e.message);}
+}
+async function addMember(){
+  try{await api('/api/members',{method:'POST',body:JSON.stringify({name:el('memberName').value,email:el('memberEmail').value,member_type:el('memberType').value})});notify('Member registered');await refresh();}
+  catch(e){notify(e.message);}
+}
+async function issueBook(){
+  try{await api('/api/issue',{method:'POST',body:JSON.stringify({book_id:Number(el('bookId').value),member_id:Number(el('memberId').value)})});notify('Book issued for 14 days');await refresh();}
+  catch(e){notify(e.message);}
+}
+async function returnBook(id){
+  try{const result=await api('/api/return/'+id,{method:'POST'});notify('Book returned. Fine: Rs. '+result.fine);await refresh();}
+  catch(e){notify(e.message);}
+}
+async function refresh(){try{await Promise.all([loadDashboard(),loadBooks(),loadMembers(),loadIssues()]);}catch(e){notify(e.message+' — check that the database and server are running.');}}
+refresh();
+</script>
+</body></html>
